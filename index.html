@@ -2,17 +2,22 @@
 <html lang="fa">
 <head>
   <meta charset="UTF-8">
-  <title>Maze Race</title>
+  <title>Maze Race Online</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="controls">
-    <button id="joinBtn">ورود به اتاق</button>
-    <button id="createBtn">ساخت اتاق</button>
-    <input id="roomId" placeholder="کد اتاق">
+  <div id="ui">
+    <div id="top-bar">
+      <input id="roomId" placeholder="کد اتاق" dir="ltr">
+      <button id="createBtn">ساختن اتاق</button>
+      <button id="joinBtn">ورود به اتاق</button>
+    </div>
+    <div id="status">در حال اتصال...</div>
   </div>
-  <div id="status">در حال اتصال...</div>
-  <canvas id="cv"></canvas>
+
+  <canvas id="cv" width="820" height="820"></canvas>
+
   <script src="game.js"></script>
 </body>
 </html>
