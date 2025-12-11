@@ -3,7 +3,7 @@
 // =========================
 
 // ----- تنظیمات پایه
-const cell = 20;
+let cell = 24; // سایز پایه، بعداً با توجه به اندازه صفحه تنظیم می‌شود
 const wsUrl = "wss://maze-race-server.onrender.com/ws";
 
 // عناصر UI
@@ -53,15 +53,25 @@ let roomsCache     = [];
 
 let maze = null;
 let me   = null;
-let others = [];   // برای چند نفر
+let others = [];
 let winnerId = null;
 
-// چهار کاراکتر برند hapishapish (برای الان فقط رنگ و start)
+// حرکت روان دسکتاپ
+const keysDown = {
+  up: false,
+  down: false,
+  left: false,
+  right: false
+};
+let lastMoveTime = 0;
+let moveInterval = 100; // هر 100 میلی‌ثانیه یک خانه
+
+// چهار کاراکتر پایه (برای رنگ و start)
 const characters = [
-  { name: 'Hapi Blue',   color: '#39f',    start: { x: 1, y: 1 } },
-  { name: 'Shapi Orange',color: '#f93',   start: { x: 1, y: 2 } },
-  { name: 'Greepi',      color: '#4caf50',start: { x: 2, y: 1 } },
-  { name: 'Pinki',       color: '#e91e63',start: { x: 2, y: 2 } }
+  { name: 'Hapi Blue',    color: '#39f',    start: { x: 1, y: 1 } },
+  { name: 'Shapi Orange', color: '#f93',   start: { x: 1, y: 2 } },
+  { name: 'Greepi',       color: '#4caf50',start: { x: 2, y: 1 } },
+  { name: 'Pinki',        color: '#e91e63',start: { x: 2, y: 2 } }
 ];
 
 // =========================
@@ -87,7 +97,7 @@ function setStatus(msg) {
   statusEl.textContent = msg || '';
 }
 
-// رندر لیست اتاق‌ها در لابی
+// رندر لیست اتاق‌ها
 function renderRoomList() {
   roomListEl.innerHTML = '';
   if (!roomsCache || roomsCache.length === 0) {
@@ -123,7 +133,6 @@ function renderRoomList() {
     joinBtnSmall.textContent = 'ورود';
     joinBtnSmall.addEventListener('click', () => {
       roomIdInput.value = room.roomId;
-      showScreen('lobby');
     });
 
     item.appendChild(infoDiv);
@@ -132,7 +141,7 @@ function renderRoomList() {
   });
 }
 
-// رندر بازیکن‌های داخل اتاق
+// رندر بازیکن‌های داخل اتاق (فعلاً ساده، بعداً با state تکمیل می‌کنیم)
 function renderCurrentRoomPlayers(players) {
   currentRoomPlayers.innerHTML = '';
   if (!players || players.length === 0) {
@@ -156,6 +165,28 @@ function renderCurrentRoomPlayers(players) {
     currentRoomPlayers.appendChild(row);
   });
 }
+
+// =========================
+// Canvas / Responsive
+// =========================
+
+function resizeCanvasForDevice() {
+  const size = Math.min(window.innerWidth - 20, window.innerHeight - 120, 820);
+  cv.width  = size;
+  cv.height = size;
+
+  if (maze && maze.grid) {
+    cell = Math.floor(size / maze.grid[0].length);
+  } else {
+    cell = Math.floor(size / 41);
+  }
+
+  // سرعت حرکت متناسب با اندازه سلول اگر خواستی
+  moveInterval = 90;
+}
+
+window.addEventListener('resize', resizeCanvasForDevice);
+resizeCanvasForDevice();
 
 // =========================
 // Maze generation
@@ -202,8 +233,28 @@ function generateMaze(w, h, seed){
   return {
     grid,
     start: { x: 1, y: 1 },
-    exit: { x: w - 2, y: h - 2 }
+    exit: { x: w - 2, y: h - 2 },
+    puzzles: []
   };
+}
+
+// چند نقطه معما وسط راه
+function placePuzzlePoints(maze, count = 3) {
+  const h = maze.grid.length;
+  const w = maze.grid[0].length;
+  const points = [];
+
+  let tries = 0;
+  while (points.length < count && tries < 500) {
+    tries++;
+    const x = 2 + Math.floor(Math.random() * (w - 4));
+    const y = 2 + Math.floor(Math.random() * (h - 4));
+    if (maze.grid[y][x] === 0) {
+      points.push({ x, y, solved: false, id: 'p' + points.length });
+    }
+  }
+
+  maze.puzzles = points;
 }
 
 // =========================
@@ -231,7 +282,7 @@ function draw(){
   // دیوارها
   for (let y = 0; y < maze.grid.length; y++){
     for (let x = 0; x < maze.grid[0].length; x++){
-      ctx.fillStyle = maze.grid[y][x] ? '#222' : '#050505';
+      ctx.fillStyle = maze.grid[y][x] ? '#151515' : '#050505';
       ctx.fillRect(x * cell, y * cell, cell, cell);
     }
   }
@@ -240,37 +291,103 @@ function draw(){
   ctx.fillStyle = '#3c3';
   ctx.fillRect(maze.exit.x * cell, maze.exit.y * cell, cell, cell);
 
+  // نقاط معما
+  if (maze.puzzles) {
+    maze.puzzles.forEach(p => {
+      if (p.solved) return;
+      ctx.fillStyle = '#ff0';
+      ctx.beginPath();
+      ctx.arc(
+        p.x * cell + cell / 2,
+        p.y * cell + cell / 2,
+        cell * 0.25,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+    });
+  }
+
   // دیگران
   others.forEach(o => {
+    const cx = o.x * cell + cell / 2;
+    const cy = o.y * cell + cell / 2;
+    const r  = cell * 0.35;
+
     ctx.fillStyle = o.color || '#888';
     ctx.beginPath();
-    ctx.arc(
-      o.x * cell + cell / 2,
-      o.y * cell + cell / 2,
-      cell * 0.4,
-      0,
-      Math.PI * 2
-    );
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
   });
 
-  // خودت
+  // خودت - استایل پکمن
   if (me){
+    const cx = me.x * cell + cell / 2;
+    const cy = me.y * cell + cell / 2;
+    const r  = cell * 0.45;
+
+    // بدن
     ctx.fillStyle = me.color || playerColor;
     ctx.beginPath();
-    ctx.arc(
-      me.x * cell + cell / 2,
-      me.y * cell + cell / 2,
-      cell * 0.45,
-      0,
-      Math.PI * 2
-    );
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // دهان (مثل پکمن)
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r * 0.8, -0.3 * Math.PI, 0.3 * Math.PI, false);
+    ctx.closePath();
+    ctx.fill();
+
+    // چشم
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.3, cy - r * 0.3, r * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(cx + r * 0.35, cy - r * 0.32, r * 0.07, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
-function loop(){
+function loop(timestamp){
   draw();
+
+  // حرکت روان دسکتاپ
+  if (me && maze) {
+    if (!timestamp) timestamp = performance.now();
+    if (timestamp - lastMoveTime > moveInterval) {
+      let moved = false;
+
+      if (keysDown.up)    { tryMove(me, 0, -1); moved = true; }
+      else if (keysDown.down) { tryMove(me, 0, 1);  moved = true; }
+
+      if (keysDown.left)  { tryMove(me, -1, 0); moved = true; }
+      else if (keysDown.right) { tryMove(me, 1, 0);  moved = true; }
+
+      if (moved) {
+        send({ type: 'move', payload: { x: me.x, y: me.y } });
+        if (me.x === maze.exit.x && me.y === maze.exit.y) {
+          send({ type: 'win' });
+        }
+
+        // چک ساده: روی نقطه معما ایستاده؟
+        if (maze.puzzles) {
+          maze.puzzles.forEach(p => {
+            if (!p.solved && p.x === me.x && p.y === me.y) {
+              // فعلاً فقط solved می‌کنیم؛ بعداً معما باز می‌کنیم
+              p.solved = true;
+            }
+          });
+        }
+
+        lastMoveTime = timestamp;
+      }
+    }
+  }
+
   requestAnimationFrame(loop);
 }
 
@@ -313,30 +430,27 @@ function connectWS(){
     if (msg.type === 'roomCreated') {
       currentRoomId = msg.roomId;
       isRoomOwner = true;
-      lobbyStatus.textContent = `اتاق ساخته شد: ${msg.roomId}`;
+      setLobbyStatus(`اتاق ساخته شد: ${msg.roomId}`);
       roomIdInput.value = msg.roomId;
       currentRoomPanel.style.display = 'block';
       currentRoomTitle.textContent = `اتاق: ${msg.roomId}`;
-      // خودت تنها بازیکنی هستی فعلاً
       renderCurrentRoomPlayers([{ playerId: myPlayerId, name: playerName, color: playerColor }]);
     }
 
     if (msg.type === 'roomJoined') {
       currentRoomId = msg.roomId;
-      isRoomOwner = msg.rejoin ? isRoomOwner : false; // ساده: rejoin مالکیت را عوض نکن
-      lobbyStatus.textContent = msg.rejoin
-        ? `دوباره وارد اتاق شدی: ${msg.roomId}`
-        : `وارد اتاق شدی: ${msg.roomId}`;
-
+      setLobbyStatus(
+        msg.rejoin ? `دوباره وارد اتاق شدی: ${msg.roomId}` : `وارد اتاق شدی: ${msg.roomId}`
+      );
       currentRoomPanel.style.display = 'block';
       currentRoomTitle.textContent = `اتاق: ${msg.roomId}`;
-      // بازیکن‌ها را بعداً از state یا start می‌گیریم
     }
 
     if (msg.type === 'start') {
-      // شروع بازی
       maze = generateMaze(msg.w, msg.h, msg.seed);
       winnerId = null;
+      placePuzzlePoints(maze, 3);
+      resizeCanvasForDevice();
 
       const idx = msg.playerIndex;
       const ch = characters[idx % characters.length];
@@ -350,13 +464,12 @@ function connectWS(){
         y: baseStart.y
       };
 
-      others = []; // موقعیت دیگران را از state می‌گیریم
+      others = [];
       setStatus('بازی شروع شد! حرکت کن.');
       showScreen('game');
     }
 
     if (msg.type === 'state') {
-      // بروزرسانی موقعیت‌ها
       const players = msg.players || [];
       const mine = players.find(p => p.id === myPlayerId);
       if (mine && me) {
@@ -367,7 +480,7 @@ function connectWS(){
       others = players
         .filter(p => p.id !== myPlayerId)
         .map((p, i) => {
-          const ch = characters[i % characters.length];
+          const ch = characters[(i + 1) % characters.length];
           return {
             id: p.id,
             x: p.x,
@@ -419,8 +532,11 @@ function connectWS(){
 // کنترل‌ها (لمسی + کیبورد)
 // =========================
 
+// تاچ: یک لمس = یک حرکت، با جهت غالب
 cv.addEventListener('touchstart', handleTouch, { passive: false });
-cv.addEventListener('touchmove', handleTouch,  { passive: false });
+cv.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+}, { passive: false });
 
 function handleTouch(e){
   e.preventDefault();
@@ -454,32 +570,33 @@ function handleTouch(e){
     if (me.x === maze.exit.x && me.y === maze.exit.y) {
       send({ type: 'win' });
     }
+
+    if (navigator.vibrate) {
+      navigator.vibrate(10);
+    }
   }
 }
 
+// حرکت روان دسکتاپ با نگه داشتن کلیدها
 document.addEventListener('keydown', (e) => {
-  if (!me || !maze) return;
+  if (e.key === 'ArrowUp' || e.key === 'w')    keysDown.up = true;
+  if (e.key === 'ArrowDown' || e.key === 's')  keysDown.down = true;
+  if (e.key === 'ArrowLeft' || e.key === 'a')  keysDown.left = true;
+  if (e.key === 'ArrowRight' || e.key === 'd') keysDown.right = true;
+});
 
-  let moved = false;
-
-  if (e.key === 'ArrowUp' || e.key === 'w')    { tryMove(me, 0, -1); moved = true; }
-  if (e.key === 'ArrowDown' || e.key === 's')  { tryMove(me, 0, 1);  moved = true; }
-  if (e.key === 'ArrowLeft' || e.key === 'a')  { tryMove(me, -1, 0); moved = true; }
-  if (e.key === 'ArrowRight' || e.key === 'd') { tryMove(me, 1, 0);  moved = true; }
-
-  if (moved) {
-    send({ type: 'move', payload: { x: me.x, y: me.y } });
-    if (me.x === maze.exit.x && me.y === maze.exit.y) {
-      send({ type: 'win' });
-    }
-  }
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowUp' || e.key === 'w')    keysDown.up = false;
+  if (e.key === 'ArrowDown' || e.key === 's')  keysDown.down = false;
+  if (e.key === 'ArrowLeft' || e.key === 'a')  keysDown.left = false;
+  if (e.key === 'ArrowRight' || e.key === 'd') keysDown.right = false;
 });
 
 // =========================
 // رویدادهای UI
 // =========================
 
-// انتخاب رنگ از دکمه‌ها
+// انتخاب رنگ
 colorButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     const color = btn.dataset.color;
@@ -556,19 +673,17 @@ refreshRoomsBtn.addEventListener('click', () => {
   setLobbyStatus('به‌روزرسانی لیست اتاق‌ها...');
 });
 
-// خروج از اتاق (سمت کلاینت – ساده: فقط UI را ریست می‌کنیم)
+// خروج از اتاق (فعلاً فقط سمت کلاینت)
 leaveRoomBtn.addEventListener('click', () => {
   currentRoomId = null;
   isRoomOwner   = false;
   currentRoomPanel.style.display = 'none';
-  setLobbyStatus('از اتاق خارج شدی (سمت سرور هنوز پیاده‌سازی leaveRoom نشده).');
+  setLobbyStatus('از اتاق خارج شدی (سمت سرور هنوز leaveRoom واقعی نداریم).');
 });
 
-// شروع بازی توسط سازنده اتاق
+// شروع بازی توسط سازنده اتاق (فعلاً فقط پیام)
 startGameBtn.addEventListener('click', () => {
-  // فعلاً سرور "start" را خودش هنگام پرشدن اتاق می‌فرستد.
-  // این دکمه را بعداً می‌توانیم وصل کنیم به یک پیام خاص.
-  setLobbyStatus('شروع بازی توسط سرور مدیریت می‌شود.');
+  setLobbyStatus('شروع بازی فعلاً توسط سرور هندل می‌شود.');
 });
 
 // برگشت از بازی به لابی
