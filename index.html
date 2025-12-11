@@ -3,13 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <title>Maze Race Online</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- جلوگیری از زوم با متا ویوپورت -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="ui">
     <div id="top-bar">
-      <input id="roomId" placeholder="کد اتاق" dir="ltr">
+      <input id="roomId" placeholder="کد اتاق" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false">
       <button id="createBtn">ساختن اتاق</button>
       <button id="joinBtn">ورود به اتاق</button>
     </div>
@@ -17,6 +21,34 @@
   </div>
 
   <canvas id="cv" width="820" height="820"></canvas>
+
+  <!-- اسکریپت جلوگیری از زوم و رفرش -->
+  <script>
+    // جلوگیری از pinch‑zoom
+    document.addEventListener('touchmove', function(e) {
+      if (e.scale !== undefined && e.scale !== 1) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    // جلوگیری از double‑tap zoom
+    let lastTouchEnd = 0;
+    document.addEventListener('touchend', function(e) {
+      const now = Date.now();
+      if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    }, { passive: false });
+
+    // جلوگیری از اسکرول صفحه (تا حد ممکن)
+    document.addEventListener('touchmove', function(e) {
+      // اگر فقط روی بوم بازی کار می‌کنی، می‌تونی این رو محدود به داخل body نگه داری
+      if (e.target === document.body || e.target === document.documentElement) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  </script>
 
   <script src="game.js"></script>
 </body>
