@@ -1,3 +1,81 @@
+// انتخاب عناصر UI
+const screenStart = document.getElementById('screen-start');
+const screenLobby = document.getElementById('screen-lobby');
+const screenGame  = document.getElementById('screen-game');
+
+const playerNameInput  = document.getElementById('playerName');
+const playerColorInput = document.getElementById('playerColor');
+const colorButtons     = document.querySelectorAll('.color-btn');
+const startBtn         = document.getElementById('startBtn');
+
+const roomIdInput      = document.getElementById('roomId');
+const maxPlayersInput  = document.getElementById('maxPlayers');
+const roomPasswordInput= document.getElementById('roomPassword');
+const createBtn        = document.getElementById('createBtn');
+const joinBtn          = document.getElementById('joinBtn');
+
+const lobbyStatus      = document.getElementById('lobbyStatus');
+const lobbyGlobalStatus= document.getElementById('lobbyGlobalStatus');
+const roomListEl       = document.getElementById('roomList');
+const refreshRoomsBtn  = document.getElementById('refreshRoomsBtn');
+
+const currentRoomPanel = document.getElementById('currentRoomPanel');
+const currentRoomTitle = document.getElementById('currentRoomTitle');
+const currentRoomPlayers = document.getElementById('currentRoomPlayers');
+const leaveRoomBtn     = document.getElementById('leaveRoomBtn');
+const startGameBtn     = document.getElementById('startGameBtn');
+
+const backToLobbyBtn   = document.getElementById('backToLobbyBtn');
+const statusEl         = document.getElementById('status');
+const cv               = document.getElementById('cv');
+const ctx              = cv.getContext('2d');
+
+// وضعیت بازیکن/اتاق
+let playerName = '';
+let playerColor = '#39f';
+let myPlayerId = null;
+let currentRoomId = null;
+let isRoomOwner = false;
+let roomsCache = [];
+
+// سوییچ بین صفحات
+function showScreen(name) {
+  [screenStart, screenLobby, screenGame].forEach(s => s.classList.remove('active'));
+  if (name === 'start') screenStart.classList.add('active');
+  if (name === 'lobby') screenLobby.classList.add('active');
+  if (name === 'game')  screenGame.classList.add('active');
+}
+
+// انتخاب رنگ
+colorButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const color = btn.getAttribute('data-color');
+    playerColor = color;
+    playerColorInput.value = color;
+    colorButtons.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ادامه از صفحه شروع به لابی
+startBtn.addEventListener('click', () => {
+  const name = playerNameInput.value.trim();
+  if (!name) {
+    playerNameInput.focus();
+    return;
+  }
+  playerName = name;
+  showScreen('lobby');
+});
+
+// برگشت از بازی به لابی
+backToLobbyBtn.addEventListener('click', () => {
+  // اینجا بعداً leaveRoom واقعی و close WS یا reset state رو اضافه می‌کنیم
+  showScreen('lobby');
+});
+
+
+
 const cell = 20;
 const wsUrl = "wss://maze-race-server.onrender.com/ws";
 
