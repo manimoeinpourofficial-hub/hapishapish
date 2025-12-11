@@ -1,46 +1,57 @@
 body {
-  background: #111;
-  color: #eee;
-  font-family: Tahoma, sans-serif;
-  text-align: center;
   margin: 0;
-  padding: 0;
+  background: #000;
+  color: #eee;
+  font-family: sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-#controls {
-  margin: 10px;
+#ui {
+  width: 100%;
+  max-width: 900px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+#top-bar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#roomId {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #555;
+  background: #111;
+  color: #eee;
 }
 
 button {
-  background: #444;
-  color: #eee;
+  padding: 6px 10px;
+  border-radius: 4px;
   border: none;
-  padding: 10px 15px;
-  margin: 5px;
+  background: #3a6df0;
+  color: #fff;
   cursor: pointer;
-  border-radius: 5px;
   font-size: 14px;
 }
 
 button:hover {
-  background: #666;
-}
-
-input {
-  padding: 8px;
-  border-radius: 5px;
-  border: none;
-  margin: 5px;
+  background: #3157c2;
 }
 
 #status {
-  margin: 10px;
-  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 8px;
 }
 
-canvas {
-  background: #000;
-  display: block;
-  margin: 0 auto;
-  border: 2px solid #444;
+#cv {
+  border: 1px solid #333;
+  touch-action: none;
+  max-width: 100%;
+  height: auto;
 }
