@@ -1,6 +1,14 @@
-body {
+html, body {
   margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;      /* جلوگیری از اسکرول */
   background: #000;
+  touch-action: none;    /* کمک به جلوگیری از gestures پیش‌فرض */
+}
+
+body {
   color: #eee;
   font-family: sans-serif;
   display: flex;
@@ -40,8 +48,8 @@ button {
   font-size: 14px;
 }
 
-button:hover {
-  background: #3157c2;
+button:active {
+  background: #2747a5;
 }
 
 #status {
@@ -51,7 +59,7 @@ button:hover {
 
 #cv {
   border: 1px solid #333;
-  touch-action: none;
   max-width: 100%;
   height: auto;
+  touch-action: none; /* این هم برای بوم */
 }
