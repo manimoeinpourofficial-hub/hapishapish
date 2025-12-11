@@ -4,34 +4,107 @@
   <meta charset="UTF-8">
   <title>Maze Race Online</title>
 
-  <!-- جلوگیری از زوم با متا ویوپورت -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="ui">
-    <div id="top-bar">
-      <input id="roomId" placeholder="کد اتاق" dir="ltr" autocomplete="off" autocorrect="off" spellcheck="false">
-      <button id="createBtn">ساختن اتاق</button>
-      <button id="joinBtn">ورود به اتاق</button>
-    </div>
-    <div id="status">در حال اتصال...</div>
+  <div id="app">
+
+    <!-- صفحه شروع: نام و رنگ -->
+    <section id="screen-start" class="screen active">
+      <h1>Maze Race</h1>
+      <div class="panel">
+        <label class="field">
+          <span>نام بازیکن</span>
+          <input id="playerName" placeholder="مثلاً Mani" maxlength="16">
+        </label>
+
+        <label class="field">
+          <span>رنگ بازیکن</span>
+          <div class="color-row">
+            <button class="color-btn" data-color="#39f" style="background:#39f"></button>
+            <button class="color-btn" data-color="#f93" style="background:#f93"></button>
+            <button class="color-btn" data-color="#4caf50" style="background:#4caf50"></button>
+            <button class="color-btn" data-color="#e91e63" style="background:#e91e63"></button>
+          </div>
+          <input id="playerColor" type="text" value="#39f" dir="ltr">
+        </label>
+
+        <button id="startBtn" class="primary-btn">ادامه</button>
+      </div>
+    </section>
+
+    <!-- صفحه لابی / اتاق -->
+    <section id="screen-lobby" class="screen">
+      <h2>اتاق‌ها</h2>
+
+      <div class="panel">
+        <div class="field-row">
+          <label class="field">
+            <span>کد اتاق</span>
+            <input id="roomId" dir="ltr" placeholder="مثلاً 15r17" autocomplete="off" spellcheck="false">
+          </label>
+          <label class="field small">
+            <span>بازیکن‌ها</span>
+            <input id="maxPlayers" type="number" min="1" max="8" value="2">
+          </label>
+        </div>
+
+        <label class="field">
+          <span>رمز (اختیاری)</span>
+          <input id="roomPassword" type="password" placeholder="بدون رمز هم میشه گذاشت">
+        </label>
+
+        <div class="btn-row">
+          <button id="createBtn" class="primary-btn">ساختن اتاق</button>
+          <button id="joinBtn" class="secondary-btn">ورود به اتاق</button>
+        </div>
+
+        <div id="lobbyStatus" class="status"></div>
+      </div>
+
+      <div class="panel room-list-panel">
+        <div class="panel-header">
+          <span>اتاق‌های فعال</span>
+          <button id="refreshRoomsBtn" class="mini-btn">ریفرش</button>
+        </div>
+        <div id="roomList" class="room-list"></div>
+      </div>
+
+      <div class="panel current-room-panel" id="currentRoomPanel" style="display:none;">
+        <div class="panel-header">
+          <span id="currentRoomTitle">اتاق:</span>
+        </div>
+        <div id="currentRoomPlayers" class="player-list"></div>
+        <div class="btn-row">
+          <button id="leaveRoomBtn" class="secondary-btn">خروج از اتاق</button>
+          <button id="startGameBtn" class="primary-btn">شروع بازی</button>
+        </div>
+      </div>
+
+      <div id="lobbyGlobalStatus" class="status global"></div>
+    </section>
+
+    <!-- صفحه بازی -->
+    <section id="screen-game" class="screen">
+      <div class="top-bar">
+        <button id="backToLobbyBtn" class="mini-btn">خروج</button>
+        <div id="status" class="status">در حال اتصال...</div>
+      </div>
+      <canvas id="cv" width="820" height="820"></canvas>
+    </section>
   </div>
 
-  <canvas id="cv" width="820" height="820"></canvas>
-
-  <!-- اسکریپت جلوگیری از زوم و رفرش -->
+  <!-- اسکریپت جلوگیری از زوم/رفرش تا حد ممکن -->
   <script>
-    // جلوگیری از pinch‑zoom
     document.addEventListener('touchmove', function(e) {
       if (e.scale !== undefined && e.scale !== 1) {
         e.preventDefault();
       }
     }, { passive: false });
 
-    // جلوگیری از double‑tap zoom
     let lastTouchEnd = 0;
     document.addEventListener('touchend', function(e) {
       const now = Date.now();
@@ -41,9 +114,7 @@
       lastTouchEnd = now;
     }, { passive: false });
 
-    // جلوگیری از اسکرول صفحه (تا حد ممکن)
     document.addEventListener('touchmove', function(e) {
-      // اگر فقط روی بوم بازی کار می‌کنی، می‌تونی این رو محدود به داخل body نگه داری
       if (e.target === document.body || e.target === document.documentElement) {
         e.preventDefault();
       }
